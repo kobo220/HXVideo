@@ -1,6 +1,22 @@
 import struct
 import csv
 
+NAL_UNIT_TYPES = {
+    0: "TRAIL_N",
+    1: "TRAIL_R",
+    19: "IDR_W_RADL",
+    20: "IDR_N_LP",
+    21: "CRA_NUT",
+    32: "VPS_NUT",
+    33: "SPS_NUT",
+    34: "PPS_NUT",
+    35: "AUD_NUT",
+    36: "EOS_NUT",
+    37: "EOB_NUT",
+    38: "FD_NUT",
+    39: "SEI_NUT"
+}
+
 def find_blocks_streaming(f, magic_words, chunk_size=4*1024*1024):
     """
     Scan an already opened file handle `f` in chunks to identify all block occurrences.
@@ -124,6 +140,18 @@ def parse_block_type_hxfi(f, offset, magic):
     block_data = f.read(data_length)
     return {"length": data_length, "data": block_data}
 
+def h265_nalu_type(data):
+    """ 
+    Decode H.265 NALU data and return the type as an integer.
+    """
+    if data[0:3] == b'\x00\x00\x01':
+        unit_type = (data[3] >> 1) & 0x3F
+        return unit_type
+    elif data[0:4] == b'\x00\x00\x00\x01':
+        # This seems to be the expected format in the video files I have examined.
+        unit_type = (data[4] >> 1) & 0x3F
+        return unit_type
+
 
 if __name__ == "__main__":
     # Define magic words and their corresponding block types
@@ -144,7 +172,7 @@ if __name__ == "__main__":
         "HXFI": parse_block_type_hxfi
     }
 
-    filename = "A210515_130559_130613.265"
+    filename = "P241117_000000_000340.265"
     # Open the file once
     with open(filename, 'rb') as f:
         with open('csv_data.csv', mode='w') as csv_file:
@@ -159,7 +187,7 @@ if __name__ == "__main__":
                     print(f"Parsed {btype} at offset {offset}: {block_info}")
                     #if btype == "HXVF" or btype == "HXAF":
                     if btype == "HXVF":
-                        csv_file.write(f"{offset},{btype},{block_info['timestamp']}, {block_info['length']}\n")
+                        csv_file.write(f"{offset},{btype},{block_info['timestamp']}, {block_info['length']}, {h265_nalu_type(block_info['data'])}\n")
                         with open(f'frames/{offset}.265', mode='wb') as frame_file:
                             frame_file.write(block_info['data'])
                 else:
