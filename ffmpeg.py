@@ -1,5 +1,8 @@
 import struct
 import csv
+import av
+import math
+from fractions import Fraction
 
 NAL_UNIT_TYPES = {
     0: "TRAIL_N",
@@ -27,6 +30,7 @@ def find_blocks_streaming(f, magic_words, chunk_size=4*1024*1024):
     leftover_length = max_magic_len - 1
 
     found_blocks = []
+    timestamp_list = []
     leftover = b''
     total_offset = 0
 
@@ -151,9 +155,45 @@ def h265_nalu_type(data):
         # This seems to be the expected format in the video files I have examined.
         unit_type = (data[4] >> 1) & 0x3F
         return unit_type
+    
+def calculate_time_base(f, blocks):
+    """
+    Calculate the time base (ticks per second) from a list of timestamps in milliseconds.
+
+    Args:
+        timestamps_ms (list of float): List of timestamps in milliseconds.
+
+    Returns:
+        tuple: (numerator, denominator) of the time base (e.g., 1/1000).
+    """
+    timestamps_ms = []
+    for offset, magic, btype in blocks:
+        if btype == "HXVT" or btype == "HXVF" or btype == "HXAF":
+            f.seek(offset + len(magic))
+            ts_bytes = f.read(4)
+            if len(ts_bytes) < 4:
+                raise IOError("Unexpected end of file while reading timestamp.")
+            block_ts = struct.unpack('<I', ts_bytes)[0]
+            timestamps_ms.append(block_ts)
+
+    # Calculate differences between consecutive timestamps
+    differences = [timestamps_ms[i + 1] - timestamps_ms[i] for i in range(len(timestamps_ms) - 1)]
+    
+    # Convert to integer microseconds for precision
+    differences_us = [int(d * 1000) for d in differences]
+    
+    # Find GCD of all differences
+    gcd_us = differences_us[0]
+    for diff in differences_us[1:]:
+        gcd_us = math.gcd(gcd_us, diff)
+
+    # Time base is 1 / (1000000 / gcd_us)
+    ticks_per_second = int(1_000_000 / gcd_us)
+    return ticks_per_second
 
 
 if __name__ == "__main__":
+
     # Define magic words and their corresponding block types
     magic_dict = {
         b'HXVS': "HXVS",
@@ -179,16 +219,44 @@ if __name__ == "__main__":
             # First pass: find all blocks
             blocks = find_blocks_streaming(f, magic_dict)
 
+            initial_ts = -1
+            previous_ts = -1
+            time_base = calculate_time_base(f, blocks)
+
+            output_container = av.open(r'C:\Users\Student\Code\videotest\output\output_magic_test.mp4', mode='w')
+            output_stream = output_container.add_stream('libx265')
+            output_stream.time_base = Fraction(1, 1000) # Set the time base. Do I have to calculate this or can i assume 1000?
+            print(f"Time base: {time_base}")
+
+
             # Now we can parse each block with the same file handle
             for offset, magic, btype in blocks:
                 parser = block_parsers.get(btype)
                 if parser is not None:
                     block_info = parser(f, offset, magic)
-                    print(f"Parsed {btype} at offset {offset}: {block_info}")
+                    #print(f"Parsed {btype} at offset {offset}: {block_info}")
                     #if btype == "HXVF" or btype == "HXAF":
-                    if btype == "HXVF":
+                    if btype == "HXVT":
+                        video_width = block_info['width']
+                        video_height = block_info['height']
+                    elif btype == "HXVF":
                         csv_file.write(f"{offset},{btype},{block_info['timestamp']}, {block_info['length']}, {h265_nalu_type(block_info['data'])}\n")
-                        with open(f'output/frames/{offset}.265', mode='wb') as frame_file:
-                            frame_file.write(block_info['data'])
+                        #with open(f'output/frames/{offset}.265', mode='wb') as frame_file:
+                        #    frame_file.write(block_info['data'])
+                        
+                        packet = av.packet.Packet(block_info['data'])
+                        if initial_ts == -1:
+                            initial_ts = block_info['timestamp']
+                            packet_ts = 0
+                        else:
+                            packet_ts = block_info['timestamp'] - initial_ts
+                        #packet.pts = int(packet_ts * time_base / 1000)
+                        packet.pts = int((packet_ts/1000) * output_stream.time_base.denominator / output_stream.time_base.numerator)
+                        packet.dts = packet.pts
+                        packet.stream = output_stream
+
+                        output_container.mux(packet)
                 else:
                     print(f"No parser available for block type {btype}")
+
+            output_container.close()
