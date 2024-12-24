@@ -58,7 +58,7 @@ def find_blocks_streaming(f, magic_words, chunk_size=4*1024*1024):
         total_offset += len(chunk)
         leftover = data[-leftover_length:] if len(data) >= leftover_length else data
 
-    found_blocks.sort(key=lambda x: x[0])
+    #found_blocks.sort(key=lambda x: x[0])
     return found_blocks
 
 def parse_block_type_hxvt(f, offset, magic):
@@ -223,9 +223,12 @@ if __name__ == "__main__":
             previous_ts = -1
             time_base = calculate_time_base(f, blocks)
 
-            output_container = av.open(r'C:\Users\Student\Code\videotest\output\output_magic_test.mp4', mode='w')
-            output_stream = output_container.add_stream('libx265')
+            output_container = av.open(r'C:\Users\Student\Code\videotest\output\outputtest.mkv', mode='w')
+            output_stream = output_container.add_stream('hevc')
+            codec_ctx = output_stream.codec_context
+
             output_stream.time_base = Fraction(1, 1000) # Set the time base. Do I have to calculate this or can i assume 1000?
+            codec_ctx.time_base = Fraction(1, 1000)
             print(f"Time base: {time_base}")
 
 
@@ -238,11 +241,13 @@ if __name__ == "__main__":
                     #if btype == "HXVF" or btype == "HXAF":
                     if btype == "HXVT":
                         video_width = block_info['width']
+                        codec_ctx.width = video_width
                         video_height = block_info['height']
+                        codec_ctx.height = video_height
                     elif btype == "HXVF":
                         csv_file.write(f"{offset},{btype},{block_info['timestamp']}, {block_info['length']}, {h265_nalu_type(block_info['data'])}\n")
-                        #with open(f'output/frames/{offset}.265', mode='wb') as frame_file:
-                        #    frame_file.write(block_info['data'])
+                        with open(f'output/frames/{offset}.265', mode='wb') as frame_file:
+                            frame_file.write(block_info['data'])
                         
                         packet = av.packet.Packet(block_info['data'])
                         if initial_ts == -1:
@@ -253,9 +258,12 @@ if __name__ == "__main__":
                         #packet.pts = int(packet_ts * time_base / 1000)
                         packet.pts = int((packet_ts/1000) * output_stream.time_base.denominator / output_stream.time_base.numerator)
                         packet.dts = packet.pts
+                        ##
+                        ## Add packet.duration - calculate difference between current and next packet.
+                        ##
                         packet.stream = output_stream
 
-                        output_container.mux(packet)
+                        output_container.mux_one(packet)
                 else:
                     print(f"No parser available for block type {btype}")
 
