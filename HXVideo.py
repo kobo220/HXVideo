@@ -1,19 +1,6 @@
 import argparse
 import hxutil
 
-class HXVideo:
-    class Block:
-        def __init__(self, type, offset, size, timestamp):
-            self.type = type
-            self.timestamp = timestamp
-            self.offset = offset
-            self.size = size
-    def __init__(self):
-        # Gotta decide if I want to use this class or not
-        pass
-
-
-
 def main():
     parser = argparse.ArgumentParser(prog='HXVideo.py', description='Utility to convert HX IPCam video files to something useful')
     input_group = parser.add_mutually_exclusive_group(required=True)
