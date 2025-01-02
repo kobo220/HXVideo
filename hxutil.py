@@ -95,6 +95,54 @@ def alaw_to_pcm16(alaw_chunk):
         result.extend(pcm_value.to_bytes(2, 'little', signed=True))
     return bytes(result)
 
+def valid_file(file_path):
+    """
+    Check if a file is a valid HX file.
+    
+    Args:
+        file_path (str): The path to the file.
+        
+    Returns:
+        bool: True if valid, False otherwise.
+
+    Notes:
+        This is a simple check to see if the file begins with the magic words 'HXVT' or 'HXVS'.
+    """
+    with open(file_path, 'rb') as f:
+        magic = f.read(4)
+        if magic == b'HXVT' or magic == b'HXVS':
+            return True
+        else:
+            return False
+
+def file_info(file_path):
+    """
+    Return basic information about a HX file.
+    
+    Args:
+        file_path (str): The path to the file.
+
+    Returns:
+        dict:   A dictionary containing file information.
+                Keys: 'type', 'width', 'height', 'size', 'duration'
+
+    Notes:
+        Duration is calculated from the timestamps of the first and last block.
+
+    """
+    size = os.path.getsize(file_path)
+    with open(file_path, 'rb') as f:
+        magic = f.read(4)
+        if magic == b'HXVT':
+            file_type = 'HXVT'
+        elif magic == b'HXVS':
+            file_type = 'HXVS'
+        else:
+            file_type = 'Unknown'
+        width = struct.unpack('<I', f.read(4))[0]
+        height = struct.unpack('<I', f.read(4))[0]
+
+
 def index_file(file_path):
     """
     Index a HX file.
