@@ -37,7 +37,7 @@ After the header the file contains the below data blocks which can parsed to reb
 ### File Structure
 |   Offset      |    Length     |  Data                     |  Description              |
 |---------      |--------       |---------------            |---                        |
-|   0x00 - 00   |  4 bytes      |   0x48 58 56 54 - HXVT    |   Magic Word <br> HXVT - HEVC h265                    |
+|   0x00 - 00   |  4 bytes      |   `0x48 58 56 54` - HXVT    |   Magic Word <br> HXVT - HEVC h265                    |
 |   0x04 - 04   |  4 bytes      |   32-bit int              |   Video width in pixels   |
 |   0x08 - 08   |  4 bytes      |   32-bit int              |   Video height in pixels  |
 |   0x10 - 16   |  -            |                           |   Data blocks start. See below       |
@@ -45,25 +45,25 @@ After the header the file contains the below data blocks which can parsed to reb
 ### Video Data Block
 | Relative offset   |   Length              |   Data                            |   Description             |
 |---                |---                    |---                                |---                        |
-|   0x00            |   4 bytes             |  0x48 58 56 46 - HXVF             |   Magic word              |
+|   0x00            |   4 bytes             |  `0x48 58 56 46` - HXVF             |   Magic word              |
 |   0x04            |   4 bytes             |   32-bit int                      |   Data size               |
 |   0x08            |   4 bytes             |   32-bit int                      |   Timestamp               |
 |   0x0C            |   4 bytes             |   Unknown                         |   Possibly related to frame type.  |   
-|   0x10            |   (data size) bytes   |   Start prefix + Binary NAL unit  |   Start prefix 0x00 00 00 01 + NAL unit data  |
+|   0x10            |   (data size) bytes   |   Start prefix + Binary NAL unit  |   Start prefix `0x00 00 00 01` + NAL unit data  |
 
 ### Audio Data Block
 | Relative offset   |   Length              |   Data                            |   Description             |
 |---                |---                    |---                                |---                        |
-|   0x00            |   4 bytes             |  0x48 58 41 46 - HXAF             |   Magic word              |
+|   0x00            |   4 bytes             |  `0x48 58 41 46` - HXAF             |   Magic word              |
 |   0x04            |   4 bytes             |   32-bit int                      |   Data size - 164 bytes   |
 |   0x08            |   4 bytes             |   32-bit int                      |   Timestamp               |
-|   0x0C            |   4 bytes             |   Unknown                         |   Unknown padding of 0x00 00 00 00  |   
-|   0x10            |   (data size) bytes   |   Unknown prefix + Audio data     |   Start prefix 0x00 01 50 00 + 1 byte alaw audio samples (160 total)  |
+|   0x0C            |   4 bytes             |   Unknown                         |   Unknown padding of `0x00 00 00 00`  |   
+|   0x10            |   (data size) bytes   |   Unknown prefix + Audio data     |   Start prefix `0x00 01 50 00` + 1 byte alaw audio samples (160 total)  |
 
 ### Unknown Data Block
 | Relative offset   |   Length              |   Data                            |   Description             |
 |---                |---                    |---                                |---                        |
-|   0x00            |   4 bytes             |  0xHXFI - HXFI                    |   Magic word              |
+|   0x00            |   4 bytes             |  `0x48 58 46 49` - HXFI                    |   Magic word              |
 |   0x04            |   4 bytes             |   32-bit int                      |   Data size - 200,000 bytes   |
 |   0x08            |   (data size) bytes   |   Unknown                         |   Unknown data. Mostly 0x00   |
 
@@ -73,3 +73,14 @@ After the header the file contains the below data blocks which can parsed to reb
 - [ ] Add support for .264 files
 - [ ] Make code more robust. Currently makes some assumptions about data based on the files I've examined.
 - [ ] Corrupt/incomplete file handling.
+
+## Sources
+- **Third-Party Libraries Used:**
+  - [FFmpeg](https://ffmpeg.org/)
+  - [PyAV](https://github.com/PyAV-Org/PyAV)
+  - [Flask](https://flask.palletsprojects.com)
+  - [pywebview](https://pywebview.flowrl.com/)
+
+- **External References:**
+  - [francescovannini's ipcam26Xconvert](https://github.com/francescovannini/ipcam26Xconvert) - A tool written in C which basically does the same thing as this tool.
+  - [Spitzner's research of KKmoon ipcam](https://spitzner.org/kkmoon.html) - Research into decoding the proprietary files used in these flavors of IP surveillance cameras.
