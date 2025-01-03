@@ -5,7 +5,7 @@ This is still a work in progress. Not all features are built out at this time. M
 
 ## Introduction
 This Python script converts proprietary .265 file extension video files from certain IP surveillance cameras to a useable format that can be played in common video players such as VLC media player or PotPlayer. Playback in Windows Media Player may be possible
-if your system was the proper HEVC codecs installed. The video data is not transcoded and is copied as it into a new container. This can be verified using [FFmpeg's framemd5](https://trac.ffmpeg.org/wiki/framemd5%20Intro%20and%20HowTo) Audio data is transcoded from a-law to pcm_s16le to be compatible with modern video containers, however this is a lossless process. 
+if your system was the proper HEVC codecs installed. The video data is not transcoded and is copied as it into a new container. This can be verified using [FFmpeg's framemd5](https://trac.ffmpeg.org/wiki/framemd5%20Intro%20and%20HowTo). Audio data is transcoded from a-law to pcm_s16le to be compatible with modern video containers, however this is a lossless process. 
 
 >[!NOTE]
 >Support for the .264 file extension (HXVS) is planned.
@@ -69,7 +69,7 @@ After the header the file contains the below data blocks which can parsed to reb
 
 
 ## TODO
--[] Finish building out functionality described above and in software.
--[] Add support for .264 files
--[] Make code more robust. Currently makes some assumptions about data based on the files I've examined.
--[] Corrupt/incomplete file handling.
+- [ ] Finish building out functionality described above and in software.
+- [ ] Add support for .264 files
+- [ ] Make code more robust. Currently makes some assumptions about data based on the files I've examined.
+- [ ] Corrupt/incomplete file handling.
