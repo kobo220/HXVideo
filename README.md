@@ -1,10 +1,33 @@
 # HXVideo
 
+> [!CAUTION]
+This is still a work in progress. Not all features are built out at this time. Minimal debugging and error handling have been tested.
+
 ## Introduction
 This Python script converts proprietary .265 file extension video files from certain IP surveillance cameras to a useable format that can be played in common video players such as VLC media player or PotPlayer. Playback in Windows Media Player may be possible
-if your system was the proper HEVC codecs installed.<p>
->[!IMPORTANT]
+if your system was the proper HEVC codecs installed. The video data is not transcoded and is copied as it into a new container. This can be verified using [FFmpeg's framemd5](https://trac.ffmpeg.org/wiki/framemd5%20Intro%20and%20HowTo) Audio data is transcoded from a-law to pcm_s16le to be compatible with modern video containers, however this is a lossless process. 
+
+>[!NOTE]
 >Support for the .264 file extension (HXVS) is planned.
+
+## Usage
+
+```
+usage: HXVideo.py [-h] [-i I] [-o O] [-fmt FMT] [-indir INDIR] [-outdir OUTDIR] [-r] [-v]
+
+Utility to convert HX IPCam video files to something useful
+
+options:
+  -h, --help       show this help message and exit
+  -i I, -input I   Input file: The HX file you want to convert.
+  -o O, -output O  Output file: The output file you want to create.
+  -fmt FMT         Output format: The format you want to convert to.
+  -indir INDIR     Input directory: The directory containing the HX files you want to convert.
+  -outdir OUTDIR   Output directory: The directory where you want to save the converted files.
+  -r               Recursive mode: Process subdirectories and their contents.
+  -v               Verbose mode: Print debug information.
+
+  ```
 
 
 ## File Details
@@ -44,3 +67,9 @@ After the header the file contains the below data blocks which can parsed to reb
 |   0x04            |   4 bytes             |   32-bit int                      |   Data size - 200,000 bytes   |
 |   0x08            |   (data size) bytes   |   Unknown                         |   Unknown data. Mostly 0x00   |
 
+
+## TODO
+-[] Finish building out functionality described above and in software.
+-[] Add support for .264 files
+-[] Make code more robust. Currently makes some assumptions about data based on the files I've examined.
+-[] Corrupt/incomplete file handling.
