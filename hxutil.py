@@ -309,7 +309,7 @@ def rewrap_file(input_file, output_file=None, format='mkv', overwrite=False, deb
         video_buffer = bytearray()
 
         for block in blocks:
-            print(f'Processing block: {block.type} - Timestamp: {block.timestamp} - Offset: {block.offset} - Size: {block.size}')
+            #print(f'Processing block: {block.type} - Timestamp: {block.timestamp} - Offset: {block.offset} - Size: {block.size}')
             if block.type == 'HXAF':
                 f.seek(block.offset + 20) # Skip 4 byte header, size, offset, and 4 byte data header.
                 data = f.read(block.size - 4)
@@ -325,11 +325,11 @@ def rewrap_file(input_file, output_file=None, format='mkv', overwrite=False, deb
                 data = f.read(block.size)
                 video_buffer.extend(data)
                 nalu_type = h265_nalu_type(data)
-                print(f'NALU Type: {nalu_type}')
+                #print(f'NALU Type: {nalu_type}')
                 if nalu_type not in (1, 19):
                     # Buffer this data. Will be Packetized and muxed later with video frame data.
                     # Video typically has NALU types 32, 33, and 34 that directly proceed type 19. All share the same timestamp.
-                    print(f'Added block to buffer - Offset: {block.offset} NAL type: {nalu_type}')
+                    #print(f'Added block to buffer - Offset: {block.offset} NAL type: {nalu_type}')
                     continue
                 packet = av.packet.Packet(video_buffer)
                 packet.time_base = Fraction(1, 1000)
@@ -338,6 +338,6 @@ def rewrap_file(input_file, output_file=None, format='mkv', overwrite=False, deb
                 packet.stream = video_stream
                 container.mux_one(packet)
                 video_buffer.clear()
-                print(f'Video packet: {packet} - NALU Type: {nalu_type} - Timestamp: {block.relative_ts} - Offset: {block.offset}')
+                #print(f'Video packet: {packet} - NALU Type: {nalu_type} - Timestamp: {block.relative_ts} - Offset: {block.offset}')
     container.close()
     return True

@@ -29,10 +29,26 @@ def get_file():
     return result
 
 def convert_files(task_id, files, output_dir, format='mkv', overwrite=False):
+    print(f'Thread started?')
+    global task_list
+    output = ''
+    num_files = len(files)
+    count = 1
+    task_list[task_id] = {'status': 'running', 'progress': 0, 'output': output}
     for file in files:
-        output_file = os.path.join(output_dir, f'{os.path.basename(file)}.mp4')
-        hxutil.convert(file, output_file)
+        pct = (count / num_files) * 100
+        output = output + f'{count}/{num_files} - Processing {file}\n'
+        task_list[task_id] = {'status': 'running', 'progress': pct, 'output': output}
+        output_file = os.path.join(output_dir, f'{os.path.basename(file)}.{format}')
+        print(f'Converted {output_file}')
+        hxutil.rewrap_file(file, output_file)
+        count += 1
+        output = output + f'Converted {file} to {output_file}\n'
+        pct = (count / num_files) * 100
+        task_list[task_id] = {'status': 'running', 'progress': pct, 'output': output}
+        print(task_list)
         print(f'Converted {file} to {output_file}')
+    task_list[task_id] = {'status': 'complete', 'progress': 100, 'output': output}
 
 def recurse_path(path, max_depth=6, current_depth=0):
     """
@@ -124,7 +140,6 @@ def batch_contents():
     return render_template('batch_contents.html', input_dir=input_dir, output_dir=output_dir, found_files=found_files)
 @server.route("/convert", methods=['POST'])
 def convert():
-    global task_list
     try:
         convert_type = request.form['convert_type']
         if convert_type == 'single':
@@ -149,26 +164,32 @@ def convert():
         return render_template('index.html', error='Output directory does not exist.')
     found_files = index_files(input_dir, recurse is not None)
 
-    task_id = uuid.uuid4()
+    task_id = str(uuid.uuid4())
     # Maybe create thread differently so it can be controlled?
-    #task = threading.Thread(target=convert_files, args=(task_id, found_files, output_dir))
+    print(f'Creating task {task_id}')
+    task = threading.Thread(target=convert_files, args=(task_id, found_files, output_dir))
+    task.start()
     print(found_files)
 
-    return render_template('convert.html', input_dir=input_dir, output_dir=output_dir, found_files=found_files)
+    return render_template('convert.html', input_dir=input_dir, output_dir=output_dir, found_files=found_files, task_id=task_id)
 
 @server.route("/status/<string:jobid>")
 def status(jobid):
-    global progress
-    global output
-    global number
-    progress += 1
-    status = 'running'
-    if progress >= number:
-        status = 'complete'
-    pct = (progress // number) * 100
-    output = output + f'\nProcessing file {progress} of 1000'
-    status = {'status': status, 'progress': progress, 'output': output}
-    return status
+
+    global task_list
+    #return {'status': 'running', 'progress': '20', 'output': 'Some text'}
+    return task_list[jobid]
+    #global progress
+    #global output
+    #global number
+    #progress += 1
+    #status = 'running'
+    #if progress >= number:
+    #    status = 'complete'
+    #pct = (progress // number) * 100
+    #output = output + f'\nProcessing file {progress} of 1000'
+    #status = {'status': status, 'progress': progress, 'output': output}
+    #return status
 if __name__ == '__main__':
     window = webview.create_window('HXVideo', server)
     window.expose(get_dir, get_file)
