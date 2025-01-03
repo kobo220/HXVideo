@@ -1,7 +1,7 @@
 # HXVideo
 
 > [!CAUTION]
-This is still a work in progress. Not all features are built out at this time. Minimal debugging and error handling have been tested.
+This is still a work in progress. Not all features are built out at this time. Minimal debugging and error handling have been tested. Use at your own risk.
 
 ## Introduction
 This Python script converts proprietary .265 file extension video files from certain IP surveillance cameras to a useable format that can be played in common video players such as VLC media player or PotPlayer. Playback in Windows Media Player may be possible
