@@ -2,19 +2,23 @@ import struct
 import av
 from fractions import Fraction
 import os
+from dataclasses import dataclass
+from typing import Optional
+import csv
 
 def enable_debug():
     av.logging.set_libav_level(av.logging.TRACE)
     av.logging.restore_default_callback()
 
+@dataclass
 class Block:
-    def __init__(self, type, offset, size, timestamp):
-        self.type = type
-        self.timestamp = timestamp
-        self.offset = offset
-        self.size = size
-        self.duration = -1
-        self.relative_ts = -1
+    type: str
+    offset: int
+    size: int
+    timestamp: int
+    duration: Optional[int] = -1
+    relative_ts: Optional[int] = -1
+    nalu_type: Optional[int] = None
 
 def h265_nalu_type(data):
     """ 
@@ -138,9 +142,15 @@ def file_info(file_path):
         elif magic == b'HXVS':
             file_type = 'HXVS'
         else:
-            file_type = 'Unknown'
+            file_type = 'unknown'
         width = struct.unpack('<I', f.read(4))[0]
         height = struct.unpack('<I', f.read(4))[0]
+    blocks = index_file(file_path)
+    if not blocks:
+        return None
+    duration = blocks[-1].timestamp - blocks[0].timestamp
+
+    return {'type': file_type, 'width': width, 'height': height, 'size': size, 'duration': duration}
 
 
 def index_file(file_path):
@@ -163,6 +173,7 @@ def index_file(file_path):
     audio_initial_ts = -1
     initial_ts = -1
     previous_video_block = None # Used to calculate duration of video blocks.
+    previous_audio_block = None # Used to calculate duration of audio blocks.
 
     try:
         with open(file_path, 'rb') as f:
@@ -192,9 +203,10 @@ def index_file(file_path):
                     offset = f.tell() - 4
                     length = struct.unpack('<I', f.read(4))[0]
                     timestamp = struct.unpack('<I', f.read(4))[0]
-                    #unknown_padding = f.read(4) - Seems to be related to type of video frame ?
-                    f.seek(4 + length, 1)
-                    block = Block('HXVF', offset, length, timestamp)
+                    unknown_padding = f.read(4) # Seems to be related to type of video frame ?
+                    data = f.read(length)
+                    nal_type = h265_nalu_type(data)
+                    block = Block('HXVF', offset, length, timestamp, nalu_type=nal_type)
                     blocks.append(block)
                 elif magic == b'HXFI':
                     # Unknown how to decode this block yet. Possibly some type of file index?
@@ -242,8 +254,15 @@ def index_file(file_path):
         if block.type == 'HXVF':
             if previous_video_block:
                 previous_video_block.duration = block.timestamp - previous_video_block.timestamp
+                previous_video_block = block
             else:
                 previous_video_block = block
+        elif block.type == 'HXAF':
+            if previous_audio_block:
+                previous_audio_block.duration = block.timestamp - previous_audio_block.timestamp
+                previous_audio_block = block
+            else:
+                previous_audio_block = block
     return blocks
 
 def rewrap_file(input_file, output_file=None, format='mkv', overwrite=False, debug=False):
@@ -340,4 +359,32 @@ def rewrap_file(input_file, output_file=None, format='mkv', overwrite=False, deb
                 video_buffer.clear()
                 #print(f'Video packet: {packet} - NALU Type: {nalu_type} - Timestamp: {block.relative_ts} - Offset: {block.offset}')
     container.close()
+    return True
+
+def csv_report(file_path, output_file=None):
+    """
+    Generate a CSV report of a HX file.
+
+    Args:
+        file_path (str): The path to the file to report on.
+        output_file (str): The path to save the report. Default is to use the same name as input with .csv extension.
+
+    Returns:
+        bool: True if successful, False otherwise.
+
+    Notes:
+        This function will generate a CSV report of the file. The report will contain the following columns:
+        'Type', 'Timestamp', 'Offset', 'Size', 'Duration', 'Relative Timestamp'
+    """
+    if not output_file:
+        output_file = file_path.rsplit('.', 1)[0] + '.csv'
+    blocks = index_file(file_path)
+    if not blocks:
+        return False
+    with open(output_file, 'w', newline='') as f:
+        csvwriter = csv.writer(f, delimiter=',')
+        csvwriter.writerow(['Type','Timestamp','Offset','Size','Duration','NALU Type'])
+        for block in blocks:
+            row = [block.type, block.timestamp, block.offset, block.size, block.duration, block.nalu_type]
+            csvwriter.writerow(row)
     return True

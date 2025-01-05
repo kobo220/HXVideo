@@ -115,7 +115,7 @@ server = Flask(__name__, static_folder='./assets', template_folder='./templates'
 
 @server.route("/")
 def hello_world():
-    return render_template('batch.html')
+    return render_template('index.html')
 
 @server.route("/batch", methods=['GET'])
 def batch_convert():

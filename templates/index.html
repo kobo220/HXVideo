@@ -1,147 +1,58 @@
-<!doctype html>
-<html lang="en" data-bs-theme="dark">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bootstrap demo</title>
-    <style>
-        .main-content {
-            padding-left: 20px;
-            padding-right: 20px;
-            padding-top: 80px;
-        }
-        .header {
-            text-align: center;
-            margin: 20px 0;
-        }
-        .form-container {
-            /*max-width: 400px;*/
-            margin: 0 auto;
-        }
-        .input-group-text {
-            width: 100px; /* Set your desired width */
-        }
-        .ascii-art {
-            font-family: monospace;
-            font-size: 0.5em;
-            white-space: pre;
-            text-align: left;
-        }
-    </style>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  </head>
-  <body>
+{% extends "template.html" %}
 
-    <nav class="navbar bg-body-tertiary fixed-top">
-        <div class="container-fluid align-middle">
-            <a class="navbar-brand" href="#">
-            <i class="bi-film" style="font-size: 1.5rem;"></i>
-            HXVideo
+{% block content %}
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        <div class="col">
+            <a href="#" class="text-decoration-none card-link">
+                <div class="card mb-3 h-100 text-center">
+                    <div class="card-header">
+                        Single File
+                    </div>
+                    <div class="card-body">
+                        <i class="bi bi-file-earmark-play-fill display-1"></i>
+                        <p class="card-text">Convert a single file.</p>
+                    </div>
+                </div>
             </a>
-            <div class="ms-auto">
-                v0.0.1 Alpha
-            </div>
         </div>
-    </nav>
-    <div class="main-content">
-        {% if error %}
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>Error:</strong> {{ error }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <div class="col">
+            <a href="/batch" class="text-decoration-none card-link">
+                <div class="card mb-3 h-100 text-center">
+                    <div class="card-header">
+                        Batch Convert
+                    </div>
+                    <div class="card-body">
+                        <i class="bi bi-folder-fill display-1"></i>
+                        <p class="card-text">Convert all files in a folder.</p>
+                    </div>
+                </div>
+            </a>
         </div>
-        <div class="error"></div>
-        {% endif %}
-        <div class="form-container">
-            <form action="/convert" method="post">
-                <div class="input-group mb-3">
-                    <span class="input-group-text" id="inputGroup-sizing-default">Input</span>
-                    <span class="form-control text-center" id="inputDir"><i>-- Input Directory --</i></span>
-                    <input type="hidden" id="inputDirField" name="input_dir">
-                    <button class="btn btn-outline-primary" type="button" onclick="get_dir('inputDir')">Select Directory</button>
+        <div class="col">
+            <a href="#" class="text-decoration-none card-link">
+                <div class="card mb-3 h-100 text-center">
+                    <div class="card-header">
+                        Fingerprint File
+                    </div>
+                    <div class="card-body">
+                        <i class="bi bi-fingerprint display-1"></i></i>
+                        <p class="card-text">Test a file to see if it works with this app.</p>
+                    </div>
                 </div>
-                <div class="input-group mb-3">
-                    <span class="input-group-text" id="inputGroup-sizing-default">Output</span>
-                    <span class="form-control text-center" id="outputDir"><i>-- Output Directory --</i></span>
-                    <input type="hidden" id="outputDirField" name="output_dir">
-                    <button class="btn btn-outline-primary" type="button" onclick="get_dir('outputDir')">Select Directory</button>
+            </a>
+        </div>
+        <div class="col">
+            <a href="#" class="text-decoration-none card-link">
+                <div class="card mb-3 h-100 text-center">
+                    <div class="card-header">
+                        Tools
+                    </div>
+                    <div class="card-body">
+                        <i class="bi bi-tools display-1"></i></i></i>
+                        <p class="card-text">Various tools.</p>
+                    </div>
                 </div>
-                <div class="input-group mb-3">
-                    <label class="input-group-text" for="inputGroupSelect02">Format</label>
-                    <select class="form-select" id="inputGroupSelect02">
-                    <option selected>Choose...</option>
-                    <option value="1">MKV</option>
-                    <option value="2">MP4</option>
-                    <option value="3">TS</option>
-                    </select>
-                </div>
-                <div class="input-group mb-3">
-                    <span class="input-group-text" id="basic-addon3">Options</span>
-                    <span class="form-control" id="basic-addon31">
-                        <div class="form-check form-switch form-check-inline">
-                            <input class="form-check-input" type="checkbox" role="switch" id="switchOverwrite">
-                            <label class="form-check-label" for="switchOverwrite">Overwrite</label>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Overwrite existing files">
-                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                                <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
-                            </svg>
-                        </div>
-                        <div class="form-check form-switch form-check-inline">
-                            <input class="form-check-input" type="checkbox" role="switch" id="switchRecurse" disabled>
-                            <label class="form-check-label" for="switchRecurse">Recurse</label>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Recurse subdirectories of output directory">
-                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                                <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
-                            </svg>
-                        </div>
-                        <div class="form-check form-switch form-check-inline">
-                            <input class="form-check-input" type="checkbox" role="switch" id="switchConcat" disabled>
-                            <label class="form-check-label" for="switchConcat">Concat Files</label>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Concatenate files">
-                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                                <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
-                            </svg>
-                        </div>
-                    </span>
-
-                </div>
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <button type="submit" class="btn btn-outline-primary btn-lg">Submit</button>
-                    <button type="clear" class="btn btn-outline-primary btn-lg" onclick="clearForm()">Clear</button>
-                </div>
-                
-            </form>
+            </a>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script>
-        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
-        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl, {
-            trigger : 'hover'
-        })) 
-
-        window.addEventListener('pywebviewready', function() {
-            ///pywebview.api.get_dir();
-        })
-
-        async function get_dir(id) {
-            const dir = await pywebview.api.get_dir();
-            document.getElementById(id).innerText = dir;
-            document.getElementById(id+'Field').value = dir;
-            console.log(dir);
-        }
-        async function get_file(id) {
-            const file = await pywebview.api.get_file();
-            console.log(file);
-        }
-        function clearForm() {
-            document.getElementById('inputDir').innerText = '-- Input Directory --';
-            document.getElementById('inputDirField').value = '';
-            document.getElementById('outputDirField').innerText = '-- Output Directory --';
-            document.getElementById('outputDirField').value = '';
-        }
-        
-    </script>
-  </body>
-</html>
+{% endblock %}

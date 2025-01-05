@@ -1,57 +1,6 @@
-<!doctype html>
-<html lang="en" data-bs-theme="dark">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bootstrap demo</title>
-    <style>
-        .main-content {
-            padding-left: 20px;
-            padding-right: 20px;
-            padding-top: 80px;
-        }
-        .header {
-            text-align: center;
-            margin: 20px 0;
-        }
-        .form-container {
-            /*max-width: 400px;*/
-            margin: 0 auto;
-        }
-        .input-group-text {
-            width: 100px; /* Set your desired width */
-        }
-        .ascii-art {
-            font-family: monospace;
-            font-size: 0.5em;
-            white-space: pre;
-            text-align: left;
-        }
-    </style>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  </head>
-  <body>
+{% extends "template.html" %}
 
-    <nav class="navbar bg-body-tertiary fixed-top">
-        <div class="container-fluid align-middle">
-            <a class="navbar-brand" href="#">
-            <i class="bi-film" style="font-size: 1.5rem;"></i>
-            HXVideo
-            </a>
-            <div class="ms-auto">
-                v0.0.1 Alpha
-            </div>
-        </div>
-    </nav>
-    <div class="main-content">
-        {% if error %}
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>Error:</strong> {{ error }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        <div class="error"></div>
-        {% endif %}
+{% block content %}
         <div class="form-container">
             <form action="/convert" method="post">
                 <input type="hidden" name="convert_type" value="batch">
@@ -108,14 +57,14 @@
                 </div>
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                     <button type="submit" class="btn btn-outline-primary btn-lg">Submit</button>
-                    <button type="clear" class="btn btn-outline-primary btn-lg" onclick="clearForm()">Clear</button>
+                    <button type="reset" class="btn btn-outline-primary btn-lg" onclick="clearForm()">Clear</button>
                 </div>
                 
             </form>
         </div>
-    </div>
+    {% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    {% block scripts %}
     <script>
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl, {
@@ -137,12 +86,11 @@
             console.log(file);
         }
         function clearForm() {
-            document.getElementById('inputDir').innerText = '-- Input Directory --';
+            document.getElementById('inputDir').innerHTML = '<i>-- Input Directory --</i>';
             document.getElementById('inputDirField').value = '';
-            document.getElementById('outputDirField').innerText = '-- Output Directory --';
+            document.getElementById('outputDir').innerHTML = '<i>-- Output Directory --</i>';
             document.getElementById('outputDirField').value = '';
         }
         
     </script>
-  </body>
-</html>
+    {% endblock %}
