@@ -39,7 +39,8 @@ def convert_files(task_id, files, output_dir, format='mkv', overwrite=False):
         pct = (count / num_files) * 100
         output = output + f'{count}/{num_files} - Processing {file}\n'
         task_list[task_id] = {'status': 'running', 'progress': pct, 'output': output}
-        output_file = os.path.join(output_dir, f'{os.path.basename(file)}.{format}')
+        #output_file = os.path.join(output_dir, f'{os.path.basename(file)}.{format}')
+        output_file = output_dir / f'{file.stem}.{format}'
         print(f'Converted {output_file}')
         hxutil.rewrap_file(file, output_file)
         count += 1
@@ -68,15 +69,23 @@ def recurse_path(path, max_depth=6, current_depth=0):
     contents = []
 
     try:
-        with os.scandir(path) as entries:
-            for entry in entries:
-                if entry.is_dir(follow_symlinks=False):
-                    # If it's a directory, add it and recurse into it
-                    contents.append(entry)
-                    contents.extend(recurse_path(entry.path, max_depth, current_depth + 1))
-                else:
-                    # If it's a file, add it to the list
-                    contents.append(entry)
+        for item in path.iterdir():
+            if item.is_dir():
+                # If it's a directory, add it and recurse into it
+                contents.append(item)
+                contents.extend(recurse_path(item, max_depth, current_depth + 1))
+            else:
+                # If it's a file, add it to the list
+                contents.append(item)
+        #with os.scandir(path) as entries:
+        #    for entry in entries:
+        #        if entry.is_dir(follow_symlinks=False):
+        #            # If it's a directory, add it and recurse into it
+        #            contents.append(entry)
+        #            contents.extend(recurse_path(entry.path, max_depth, current_depth + 1))
+        #        else:
+        #            # If it's a file, add it to the list
+        #            contents.append(entry)
     except PermissionError:
         print(f"Permission denied: {path}")
     except FileNotFoundError:
@@ -92,11 +101,11 @@ def index_files(path, recurse=False):
         recurse_depth = 0
     #try:
         #for file in os.scandir(dir):
-        for item in recurse_path(path, recurse_depth):
-            if (item.name.endswith('.264') or item.name.endswith('.265')) and item.is_file(follow_symlinks=False):
-                if hxutil.valid_file(item):
-                    files.append(item)
-        return files
+    for item in recurse_path(path, recurse_depth):
+        if (item.suffix == '.264' or item.suffix == '.265') and item.is_file():
+            if hxutil.valid_file(item):
+                files.append(item)
+    return files
     #except FileNotFoundError:
     #    print('Directory not found')
     #except PermissionError:
@@ -106,7 +115,7 @@ def index_files(path, recurse=False):
     #except Exception as e:
     #    print(f"Error reading directory : {e}")
     
-    return files
+    #return files
 
 
 
@@ -162,12 +171,14 @@ def convert():
         return render_template('index.html', error='Input directory does not exist.')
     if not os.path.exists(output_dir):
         return render_template('index.html', error='Output directory does not exist.')
-    found_files = index_files(input_dir, recurse is not None)
+    input_path = Path(input_dir)
+    output_path = Path(output_dir)
+    found_files = index_files(input_path, recurse is not None)
 
     task_id = str(uuid.uuid4())
-    # Maybe create thread differently so it can be controlled?
+    # Maybe create thread or track differently so it can be controlled/stopped if needed?
     print(f'Creating task {task_id}')
-    task = threading.Thread(target=convert_files, args=(task_id, found_files, output_dir))
+    task = threading.Thread(target=convert_files, args=(task_id, found_files, output_path))
     task.start()
     print(found_files)
 

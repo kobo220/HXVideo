@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 import csv
+from pathlib import Path
 
 def enable_debug():
     av.logging.set_libav_level(av.logging.TRACE)
@@ -104,7 +105,7 @@ def valid_file(file_path):
     Check if a file is a valid HX file.
     
     Args:
-        file_path (str): The path to the file.
+        file_path (pathlib.Path): The path to the file.
         
     Returns:
         bool: True if valid, False otherwise.
@@ -112,7 +113,7 @@ def valid_file(file_path):
     Notes:
         This is a simple check to see if the file begins with the magic words 'HXVT' or 'HXVS'.
     """
-    with open(file_path, 'rb') as f:
+    with file_path.open('rb') as f:
         magic = f.read(4)
         if magic == b'HXVT' or magic == b'HXVS':
             return True
@@ -124,7 +125,7 @@ def file_info(file_path):
     Return basic information about a HX file.
     
     Args:
-        file_path (str): The path to the file.
+        file_path (pathlib.Path): The path to the file.
 
     Returns:
         dict:   A dictionary containing file information.
@@ -134,8 +135,8 @@ def file_info(file_path):
         Duration is calculated from the timestamps of the first and last block.
 
     """
-    size = os.path.getsize(file_path)
-    with open(file_path, 'rb') as f:
+    size = file_path.stat().st_size
+    with file_path.open('rb') as f:
         magic = f.read(4)
         if magic == b'HXVT':
             file_type = 'HXVT'
@@ -158,7 +159,7 @@ def index_file(file_path):
     Index a HX file.
 
     Args:
-        file_path (str): The path to the file to index.
+        file_path (pathlib.Path): The path to the file to index.
 
     Returns:
         list: A list of Block objects, or None if problem.
@@ -176,7 +177,7 @@ def index_file(file_path):
     previous_audio_block = None # Used to calculate duration of audio blocks.
 
     try:
-        with open(file_path, 'rb') as f:
+        with file_path.open('rb') as f:
             offset = 0
             magic = f.read(4)
             if not magic or len(magic) < 4 or magic != b'HXVT':
@@ -265,13 +266,13 @@ def index_file(file_path):
                 previous_audio_block = block
     return blocks
 
-def rewrap_file(input_file, output_file=None, format='mkv', overwrite=False, debug=False):
+def rewrap_file(input_file: Path, output_file: Optional[Path] = None, format: str = 'mkv', overwrite: bool = False, debug: bool = False):
     """
     Rewrap a HX file to a new container format.
 
     Args:
-        input_file (str): The path to the input file.
-        output_file (str): The path to the output file. Default is to keep the same name as input with new extension.
+        input_file (pathlib.Path): The path to the input file.
+        output_file (pathlib.Path): The path to the output file. Default is to keep the same name as input with new extension.
         format (str): The format to rewrap to. Default is 'mkv'.
         overwrite (bool): Overwrite the output file if it exists. Default is False.
         debug (bool): Enable debug logging. Default is False.
@@ -295,8 +296,10 @@ def rewrap_file(input_file, output_file=None, format='mkv', overwrite=False, deb
     if debug:
         enable_debug()
     if not output_file:
-        output_file = input_file.rsplit('.', 1)[0] + '.' + format
-    if not overwrite and os.path.exists(output_file):
+        #output_file = input_file.rsplit('.', 1)[0] + '.' + format
+        output_file = input_file.with_suffix('.' + format)
+    #print(f'Output file: {output_file}')
+    if not overwrite and output_file.exists():
         raise FileExistsError(f'Output file already exists: {output_file}')
     blocks = index_file(input_file)
     if not blocks:
@@ -306,7 +309,7 @@ def rewrap_file(input_file, output_file=None, format='mkv', overwrite=False, deb
     video_stream = container.add_stream('libx265', rate=15) # Default to 15fps for now. Our samples were VFR so we will use PTS/DTS.
     audio_stream = container.add_stream('pcm_s16le', rate=8000, layout='mono', format='s16')
 
-    with open(input_file, 'rb') as f:
+    with input_file.open('rb') as f:
         f.seek(4) # Skip the initial HXVT block.
 
         # Set video parameters.
@@ -354,6 +357,8 @@ def rewrap_file(input_file, output_file=None, format='mkv', overwrite=False, deb
                 packet.time_base = Fraction(1, 1000)
                 packet.pts = block.relative_ts
                 packet.dts = block.relative_ts
+                if block.duration != -1:
+                    packet.duration = block.duration
                 packet.stream = video_stream
                 container.mux_one(packet)
                 video_buffer.clear()
@@ -361,13 +366,13 @@ def rewrap_file(input_file, output_file=None, format='mkv', overwrite=False, deb
     container.close()
     return True
 
-def csv_report(file_path, output_file=None):
+def csv_report(input_path: Path, output_path: Optional[Path] = None):
     """
     Generate a CSV report of a HX file.
 
     Args:
-        file_path (str): The path to the file to report on.
-        output_file (str): The path to save the report. Default is to use the same name as input with .csv extension.
+        file_path (Path): The path to the file to report on.
+        output_file (Path): The path to save the report. Default is to use the same name as input with .csv extension.
 
     Returns:
         bool: True if successful, False otherwise.
@@ -377,11 +382,11 @@ def csv_report(file_path, output_file=None):
         'Type', 'Timestamp', 'Offset', 'Size', 'Duration', 'Relative Timestamp'
     """
     if not output_file:
-        output_file = file_path.rsplit('.', 1)[0] + '.csv'
-    blocks = index_file(file_path)
+        output_file = input_path.with_suffix('.csv')
+    blocks = index_file(input_path)
     if not blocks:
         return False
-    with open(output_file, 'w', newline='') as f:
+    with output_file.open('w', newline='') as f:
         csvwriter = csv.writer(f, delimiter=',')
         csvwriter.writerow(['Type','Timestamp','Offset','Size','Duration','NALU Type'])
         for block in blocks:
