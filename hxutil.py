@@ -381,15 +381,17 @@ def csv_report(input_path: Path, output_path: Optional[Path] = None):
         This function will generate a CSV report of the file. The report will contain the following columns:
         'Type', 'Timestamp', 'Offset', 'Size', 'Duration', 'Relative Timestamp'
     """
-    if not output_file:
-        output_file = input_path.with_suffix('.csv')
+    if not output_path:
+        output_path = input_path.with_suffix('.csv')
+    if output_path.is_dir():
+        output_path = output_path / f'{input_path.stem}.csv'
     blocks = index_file(input_path)
     if not blocks:
         return False
-    with output_file.open('w', newline='') as f:
+    with output_path.open('w', newline='') as f:
         csvwriter = csv.writer(f, delimiter=',')
-        csvwriter.writerow(['Type','Timestamp','Offset','Size','Duration','NALU Type'])
+        csvwriter.writerow(['Type','Timestamp', 'PTS', 'Offset','Size','Duration','NALU Type'])
         for block in blocks:
-            row = [block.type, block.timestamp, block.offset, block.size, block.duration, block.nalu_type]
+            row = [block.type, block.timestamp, block.relative_ts, block.offset, block.size, block.duration, block.nalu_type]
             csvwriter.writerow(row)
     return True

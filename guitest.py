@@ -42,9 +42,9 @@ def convert_files(task_id, files, output_dir, format='mkv', overwrite=False):
         #output_file = os.path.join(output_dir, f'{os.path.basename(file)}.{format}')
         output_file = output_dir / f'{file.stem}.{format}'
         print(f'Converted {output_file}')
-        hxutil.rewrap_file(file, output_file)
+        hxutil.rewrap_file(file, output_file, format, overwrite)
         count += 1
-        output = output + f'Converted {file} to {output_file}\n'
+        output = output + f'Converted {output_file}\n'
         pct = (count / num_files) * 100
         task_list[task_id] = {'status': 'running', 'progress': pct, 'output': output}
         print(task_list)
@@ -155,12 +155,14 @@ def convert():
             input_file = request.form['input_file']
             output_dir = request.form['output_dir']
             filename = request.form['filename']
+            format = request.form['format']
         elif convert_type == 'batch':
             input_dir = request.form['input_dir']
             output_dir = request.form['output_dir']
-            overwrite = request.form.get('overwrite')
+            overwrite = request.form.get('overwrite') == 1
             recurse = request.form.get('recurse')
             concat = request.form.get('concat')
+            format = request.form.get('format')
     except KeyError:
         return render_template('index.html', error='Please complete required fields.')
 
@@ -178,7 +180,7 @@ def convert():
     task_id = str(uuid.uuid4())
     # Maybe create thread or track differently so it can be controlled/stopped if needed?
     print(f'Creating task {task_id}')
-    task = threading.Thread(target=convert_files, args=(task_id, found_files, output_path))
+    task = threading.Thread(target=convert_files, args=(task_id, found_files, output_path, format, overwrite))
     task.start()
     print(found_files)
 
