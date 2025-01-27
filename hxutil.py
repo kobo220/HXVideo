@@ -6,6 +6,10 @@ from dataclasses import dataclass
 from typing import Optional
 import csv
 from pathlib import Path
+import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 def enable_debug():
     av.logging.set_libav_level(av.logging.TRACE)
@@ -394,4 +398,39 @@ def csv_report(input_path: Path, output_path: Optional[Path] = None):
         for block in blocks:
             row = [block.type, block.timestamp, block.relative_ts, block.offset, block.size, block.duration, block.nalu_type]
             csvwriter.writerow(row)
+    return True
+
+def rename_files(directory: Path):
+    """
+    Rename all files in a directory. Moves the A or P character to the end of the filename before the extension.
+    This helps to short the files chronologically since the filenames are date/times.
+
+    Args:
+        directory (Path): The directory containing files to rename.
+        output (Path): The directory to save renamed files to.
+
+    Returns:
+        bool: True if successful, False otherwise.
+
+    """
+    if not directory.is_dir():
+        # Not a directory. Return False.
+        logger.error(f'Path is not a directory: {directory}')
+        return False
+    for file in directory.iterdir():
+        if file.is_file():
+            stem = file.stem
+            if stem[0] in ('A', 'P'):
+                new_stem = stem[1:] + stem[0]
+                new_path = file.with_stem(new_stem)
+                logger.debug(f'Renaming file: {file} to {new_path}')
+                try:
+                    file.rename(new_path)
+                except Exception as e:
+                    logger.error(f'Error renaming file: {file} - {e}')
+                    continue
+            else:
+                # File does not need to be renamed. Skip it.
+                logger.debug(f'Skipping file: {file}')           
+                continue
     return True
