@@ -1,5 +1,5 @@
-import struct
 import av
+import struct
 from fractions import Fraction
 import os
 from dataclasses import dataclass
@@ -8,12 +8,18 @@ import csv
 from pathlib import Path
 import hashlib
 import logging
+import subprocess
+
+av.logging.set_level(None)
 
 logger = logging.getLogger(__name__)
 
 def enable_debug():
     av.logging.set_libav_level(av.logging.TRACE)
     av.logging.restore_default_callback()
+def disable_logging():
+    av.logging.set_level(None)
+    #av.logging.set_libav_level(av.logging.PANIC)
 
 @dataclass
 class Block:
@@ -299,6 +305,8 @@ def rewrap_file(input_file: Path, output_file: Optional[Path] = None, format: st
         raise ValueError('Invalid output format. Please use one of the following: ' + ', '.join(valid_formats))
     if debug:
         enable_debug()
+    else:
+        disable_logging()
     if not output_file:
         #output_file = input_file.rsplit('.', 1)[0] + '.' + format
         output_file = input_file.with_suffix('.' + format)
@@ -310,7 +318,7 @@ def rewrap_file(input_file: Path, output_file: Optional[Path] = None, format: st
         # Should we raise error here instead of returning False?
         return False
     container = av.open(output_file, 'w')
-    video_stream = container.add_stream('libx265', rate=15) # Default to 15fps for now. Our samples were VFR so we will use PTS/DTS.
+    video_stream = container.add_stream('libx265', rate=15, options={'x265-params': 'log_level=none'}) # Default to 15fps for now. Our samples were VFR so we will use PTS/DTS.
     audio_stream = container.add_stream('pcm_s16le', rate=8000, layout='mono', format='s16')
 
     with input_file.open('rb') as f:
@@ -433,4 +441,85 @@ def rename_files(directory: Path):
                 # File does not need to be renamed. Skip it.
                 logger.debug(f'Skipping file: {file}')           
                 continue
+    return True
+
+def verify(file1: Path, file2: Path, algorithm: str = 'sha256', output_path: Optional[Path] = None):
+    """
+    Compare two files using FFmpeg's framehash.
+
+    Args:
+        file1 (Path): The path of file1.
+        file2 (Path): The path of file2.
+        algorithm (str): The hash algorithm to use. Default is 'sha256'. See ffmpeg documentation for supported algorithms.
+        output (Path): The path to save the framehash output. Default is None (does not save). 
+
+    Returns:
+        bool: True if files match, False otherwise.
+
+    Raises:
+        FileNotFoundError: If FFmpeg is not found on the system or if either file does not exist.
+        RuntimeError: If FFmpeg returns an error.
+        ValueError: If an invalid algorithm is used.
+        FileExistsError: If the output framehash file already exists.
+
+    Notes:
+        This function requires the system have FFmpeg installed and be accessible from the PATH environment.
+    """
+    
+    if not file1.is_file() or not file2.is_file():
+        raise FileNotFoundError('One or both files do not exist.')
+    if algorithm.upper() not in ('MD5', 'MURMUR3', 'RIPEMD128', 'RIPEMD160', 'RIPEMD256', 'RIPEMD320', 'SHA160', 'SHA224', 'SHA256', 'SHA512/224', 'SHA512/256', 'SHA384', 'SHA512', 'CRC32', 'ADLER32'):
+        raise ValueError('Invalid algorithm. Please use one of the supported FFmpeg framhash algorithms.')
+    
+    try:
+        logging.debug('Running FFmpeg framehash on file1')
+        file1_output = subprocess.run(['ffmpeg', '-v', 'quiet', '-i', str(file1), '-map', '0:v', '-f', 'framehash', '-hash', algorithm, '-'], capture_output=True, text=True, check=True).stdout
+        logging.debug(f'File1 output: {file1_output}')
+        logging.debug('Running FFmpeg framehash on file2')
+        file2_output = subprocess.run(['ffmpeg', '-v', 'quiet', '-i', str(file2), '-map', '0:v', '-f', 'framehash', '-hash', algorithm, '-'], capture_output=True, text=True, check=True).stdout
+        logging.debug(f'File2 output: {file2_output}')
+    except FileNotFoundError:
+        raise FileNotFoundError('FFmpeg not found on system.')
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f'FFmpeg returned an error: {e}')
+    
+    file1_hashes = []
+    for line in file1_output.splitlines():
+        if line.startswith('#'):
+            continue #skip comments
+        parts = line.strip().split(',')
+        if len(parts) < 6:
+            continue #skip invalid lines
+        file1_hashes.append(parts[5].strip())
+
+    file2_hashes = []
+    for line in file2_output.splitlines():
+        if line.startswith('#'):
+            continue #skip comments
+        parts = line.strip().split(',')
+        if len(parts) < 6:
+            continue #skip invalid lines
+        file2_hashes.append(parts[5].strip())
+    
+    if len(file1_hashes) != len(file2_hashes):
+        # Files have different number of frames. They do not match.
+        logger.debug(f'Files {file1} and {file2} do not match. Different number of frames.')
+        return False
+    
+    for i, (hash1, hash2) in enumerate(zip(file1_hashes, file2_hashes)):
+        if hash1 != hash2:
+            logger.debug(f'Files {file1} and {file2} do not match. Frame {i} does not match.')
+            return False
+    
+    logger.debug(f'Files {file1} and {file2} match.')
+
+    if output_path:
+        if output_path.is_dir():
+            file1_framehash_path = output_path / f'{file1.name}.framehash'
+            file2_framehash_path = output_path / f'{file2.name}.framehash'
+            with file1_framehash_path.open('x') as f:
+                f.write(file1_output)
+            with file2_framehash_path.open('x') as f:
+                f.write(file2_output)
+
     return True
