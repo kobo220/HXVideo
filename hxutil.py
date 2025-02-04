@@ -408,6 +408,40 @@ def csv_report(input_path: Path, output_path: Optional[Path] = None):
             csvwriter.writerow(row)
     return True
 
+def get_newname(path: Path) -> Path:
+    """
+    Get a new name for a file. Moves the A or P character to the end of the filename just before the extension.
+
+    Args:
+        path (Path): The file to rename.
+
+    Returns:
+        Path: The new renamed path for the file.
+    """
+
+    # If the filename does not start with A or P, return the original path
+    if path.name[0] not in ('A', 'P'):
+        return path
+
+    # Join all suffixes to handle multiple extensions
+    suffixes = ''.join(path.suffixes)
+    
+    # Get the full filename without extensions
+    name_without_suffixes = path.name[:-len(suffixes)] if suffixes else path.stem
+
+    # If the filename is less than 2 characters, return the original path
+    if len(name_without_suffixes) < 2:
+        return path
+
+    # Move the first character to the end
+    modified_name = name_without_suffixes[1:] + name_without_suffixes[0]
+
+    # Construct the new filename with suffixes
+    new_filename = modified_name + suffixes
+
+    # Return the new path with the modified filename
+    return path.with_name(new_filename)
+
 def rename_files(directory: Path):
     """
     Rename all files in a directory. Moves the A or P character to the end of the filename before the extension.
