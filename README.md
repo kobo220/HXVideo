@@ -31,7 +31,7 @@ options:
 
 
 ## File Details
-The files contain a 16 byte header. The header consists of a magic word which designates the file type (HXVT - HEVC h265 or HXVS - H265). The header also contains the widthxheight of the video in pixels.
+The files contain a 16 byte header. The header consists of a magic word which designates the file type (HXVT - HEVC h265 or HXVS - H264). The header also contains the widthxheight of the video in pixels.
 After the header the file contains the below data blocks which can parsed to rebuild the respective data streams. These blocks contain timestamp information which is measured in milliseconds. Further reasearch is needed to see if these timestamps can be traced across sequential files. If they are, this would aid in the concatenation of clips into longer files. In the files I examined (HXVT), the video streams had both a variable bit rate and variable frame rate. Audio is a constant bit rate, with each audio data block containing 160 8-bit samples of A-law data representing 20-milliseconds of audio.
 
 ### File Structure
